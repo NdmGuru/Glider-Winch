@@ -11,55 +11,65 @@ RH_RF95 rf95;             // Singleton instance of the radio driver
 int WinchSpeed;           //   the pot reading from the pilot's controller
 char Sensor1CharMsg[4];   // winchspeed data message
 int fail =0;
+int WinchMotorPin = 3;    //
 
 void setup() 
 {
   Serial.begin(9600);
   while (!Serial) ;            // Wait for serial port to be available
-  
-  if (!rf95.init())
-    Serial.println("init failed");
-
+  pinMode(WinchMotorPin, OUTPUT);  // Tell Arduino that redLEDPin is an output pin
+  Serial.println("Starting...");
+  if (rf95.init()){
+    Serial.println("RF95 Init succsess");
+  }else{
+    Serial.println("RF95 Init FAILED");
+  }
 }
 
 void loop()
 {
-  uint8_t data[] = "Hi";               // not really needed anymore
-  rf95.send(data, sizeof(data));
+ // If We have incoming data
+ if (rf95.waitAvailableTimeout(300)){    
   
-  rf95.waitPacketSent();                 // Now wait for a reply
-  uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-  uint8_t len = sizeof(buf);
+    uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+    uint8_t len = sizeof(buf);
 
-  if (rf95.waitAvailableTimeout(3000))
-  {    
-    if (rf95.recv(buf, &len))    // Server (pilot end) starts sending winchspeed once it has been pinged with a "hi"
-   {
-      // debug  // Serial.print("winch got a speed update: ");
+    if (rf95.recv(buf, &len)){    // Recieve incoming message
         fail=0;
         int i;            
+        float WinchVoltage = 0;
+        float WinchByte = 0;
         for (i = 0; i < len; i++)
         {              
           Sensor1CharMsg[i] = char(buf[i]);   // not really needed - Fill Sensor1CharMsg Char array with corresponding chars from buf
         }       
-                     //***PROBLEM here winchspeed near top of pot range  sometimes crashes. fix buffer
+        Serial.println(Sensor1CharMsg);
+        //***PROBLEM here winchspeed near top of pot range  sometimes crashes. fix buffer
         Sensor1CharMsg[len] = '\0';           // Null terminate the char array otherwise problems  when  incoming message has less digits than the one before.
         WinchSpeed = atoi(Sensor1CharMsg);    // Cast to int
-        Serial.println(WinchSpeed);
-    
-    }
-    else
-    {
+
+        //Serial.println(WinchSpeed);
+        WinchVoltage = mapfloat(WinchSpeed, 0.00, 100.00, 1.00, 3.8);
+        WinchByte = mapfloat(WinchVoltage, 1.00, 3.8, 40, 193);
+        Serial.println(WinchVoltage);
+        Serial.println(WinchByte);
+        analogWrite(WinchMotorPin, WinchByte);
+    }else{
       Serial.println("recv failed");
       checkKillWinch();
     }
   }
   else
   {
-    //  debug only:  Serial.println("No reply, is rf95_server running?");
+    // Count check/kill
+    Serial.println("No Data");
     checkKillWinch();
   }
-  delay(400);
+}
+
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
+{
+ return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 void checkKillWinch()    //Stop the winch if 3 messages are missed in a row

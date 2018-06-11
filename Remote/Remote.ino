@@ -60,19 +60,21 @@ void loop()
   
     Sensor1Data = average;
   }
+
+  // Our ranges are wrong, we need the below:
+  // 0-1024 -- 10k POT READ
+  // 0-255  -- This relates to the PWM output at the other end. 0 = 0v, 255 = 5v.
+  // BUT!!! Our min an MAX on the controller are 1.00 = 0% RPM, 3.8V = 100% RPM
+  // To obtain this we will send 0-255 to the winch, and let it figure out voltages. That makes the most sense, and avoids the most converstion.
   
-  // Map the data from 0-100
-  // NB: Need to save the min and max to eeprom and add a config mode. 
-  Sensor1Data = map(Sensor1Data, 0, 1024, 0, 100);
+  Sensor1Data = map(Sensor1Data, 0, 1024, 0, 255);
   itoa(Sensor1Data,Sensor1CharMsg,10);      // Convert interger to char*
   
-  Serial.print("Sensor1 Integer: ");
-  Serial.print(Sensor1Data);
-      
-      delay(300);
-      rf95.send((uint8_t *)Sensor1CharMsg, strlen(Sensor1CharMsg));
-      rf95.waitPacketSent();
-      Serial.println("Sent a reply");
+  Serial.print("DEBUG: Throttle: ");
+  Serial.println(Sensor1Data);
+  
+  rf95.send((uint8_t *)Sensor1CharMsg, strlen(Sensor1CharMsg));
+  rf95.waitPacketSent();
 }
 
 

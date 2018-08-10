@@ -66,11 +66,16 @@ void loop()
   // 0-255  -- This relates to the PWM output at the other end. 0 = 0v, 255 = 5v.
   // BUT!!! Our min an MAX on the controller are 1.00 = 0% RPM, 3.8V = 100% RPM
   // To obtain this we will send 0-255 to the winch, and let it figure out voltages. That makes the most sense, and avoids the most converstion.
-  
-  Sensor1Data = map(Sensor1Data, 0, 1024, 0, 255);
+
+  //Serial.println(Sensor1Data);
+  // Throttle Min/Max is abit weird because  we arn't using the full 10k of  the trimpot.
+  // We are relying  on about 1/4  of its "throw", we should probably use a 40k pot and then we will get 10k for our  "throw"
+  // Maths and stuff needs to be done if there are still issues, this will be effecting the trottle responce and accuracy. 
+  //                             MPo 
+  Sensor1Data = map(Sensor1Data, 455, 595, 0, 255);
   itoa(Sensor1Data,Sensor1CharMsg,10);      // Convert interger to char*
   
-  Serial.print("DEBUG: Throttle: ");
+  Serial.print("DEBUG V1.1.0: Throttle: ");
   Serial.println(Sensor1Data);
   
   rf95.send((uint8_t *)Sensor1CharMsg, strlen(Sensor1CharMsg));

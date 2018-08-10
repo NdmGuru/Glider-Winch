@@ -54,5 +54,7 @@ void loop()
       Serial.println("RX FAIL!");
     }
   }
+  Serial.print("DEBUG V1.1.0: Throttle: ");
+  Serial.println(WinchSpeed);
   analogWrite(WinchMotorPin, WinchSpeed);
 }
